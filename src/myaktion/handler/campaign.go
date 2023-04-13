@@ -2,8 +2,9 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/turngeek/myaktion-go-2023/src/myaktion/model"
 	"github.com/turngeek/myaktion-go-2023/src/myaktion/service"

@@ -1,12 +1,27 @@
 package main
 
 import (
-	"log"
 	"net/http"
+	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	"github.com/turngeek/myaktion-go-2023/src/myaktion/handler"
 )
+
+func init() {
+	// init logger
+	log.SetFormatter(&log.TextFormatter{})
+	log.SetReportCaller(true)
+	level, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		log.Info("Log level not specified, using default log level: INFO")
+		log.SetLevel(log.InfoLevel)
+		return
+	}
+	log.SetLevel(level)
+}
 
 func main() {
 	log.Println("Starting My-Aktion API server")

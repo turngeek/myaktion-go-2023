@@ -1,7 +1,7 @@
 package service
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/turngeek/myaktion-go-2023/src/myaktion/model"
 )
