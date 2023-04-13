@@ -12,5 +12,6 @@ func main() {
 	log.Println("Starting My-Aktion API server")
 	router := mux.NewRouter()
 	router.HandleFunc("/health", handler.Health).Methods("GET")
+	router.HandleFunc("/campaign", handler.CreateCampaign).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
