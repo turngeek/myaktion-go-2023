@@ -23,3 +23,12 @@ func CreateCampaign(campaign *model.Campaign) error {
 	log.Printf("Stored: %v", campaign)
 	return nil
 }
+
+func GetCampaigns() ([]model.Campaign, error) {
+	var campaigns []model.Campaign
+	for _, campaign := range campaignStore {
+		campaigns = append(campaigns, *campaign)
+	}
+	log.Printf("Successfully retrieved: %v", campaigns)
+	return campaigns, nil
+}
