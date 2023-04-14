@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -13,16 +14,24 @@ import (
 var DB *gorm.DB
 
 func Init() {
-	dsn := fmt.Sprintf("root:root@tcp(%s)/myaktion?charset=utf8&parseTime=True&loc=Local", os.Getenv("DB_CONNECT"))
+	err := Connect(os.Getenv("DB_CONNECT"))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Connect(connect string) error {
+	dsn := fmt.Sprintf("root:root@tcp(%s)/myaktion?charset=utf8&parseTime=True&loc=Local", connect)
 	log.Info("Using database connection string: ", dsn)
 	var err error
 	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		return errors.New("failed to connect database")
 	}
 	log.Info("Starting automatic migration")
 	if err := DB.Debug().AutoMigrate(&model.Campaign{}, &model.Donation{}); err != nil {
-		panic(err)
+		return err
 	}
 	log.Info("Finished automatic migration")
+	return nil
 }
