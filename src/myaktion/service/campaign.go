@@ -1,22 +1,14 @@
 package service
 
 import (
-	"fmt"
+	"errors"
 
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 
 	"github.com/turngeek/myaktion-go-2023/src/myaktion/db"
 	"github.com/turngeek/myaktion-go-2023/src/myaktion/model"
 )
-
-var (
-	campaignStore map[uint]*model.Campaign
-	actCampaignId uint = 1
-)
-
-func init() {
-	campaignStore = make(map[uint]*model.Campaign)
-}
 
 func CreateCampaign(campaign *model.Campaign) error {
 	result := db.DB.Create(campaign)
@@ -39,9 +31,13 @@ func GetCampaigns() ([]model.Campaign, error) {
 }
 
 func GetCampaign(id uint) (*model.Campaign, error) {
-	campaign := campaignStore[id]
-	if campaign == nil {
-		return nil, fmt.Errorf("no campaign with ID %d", id)
+	campaign := new(model.Campaign)
+	result := db.DB.Preload("Donations").First(campaign, id)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if result.Error != nil {
+		return nil, result.Error
 	}
 	log.Tracef("Retrieved: %v", campaign)
 	return campaign, nil
@@ -49,25 +45,33 @@ func GetCampaign(id uint) (*model.Campaign, error) {
 
 func UpdateCampaign(id uint, campaign *model.Campaign) (*model.Campaign, error) {
 	existingCampaign, err := GetCampaign(id)
-	if err != nil {
+	if existingCampaign == nil || err != nil {
 		return existingCampaign, err
 	}
 	existingCampaign.Name = campaign.Name
 	existingCampaign.OrganizerName = campaign.OrganizerName
 	existingCampaign.TargetAmount = campaign.TargetAmount
 	existingCampaign.DonationMinimum = campaign.DonationMinimum
+	existingCampaign.Account = campaign.Account
+	result := db.DB.Save(existingCampaign)
+	if result.Error != nil {
+		return nil, result.Error
+	}
 	entry := log.WithField("ID", id)
 	entry.Info("Successfully updated campaign.")
-	entry.Tracef("Updated: %v", campaign)
+	entry.Tracef("Updated: %v", existingCampaign)
 	return existingCampaign, nil
 }
 
 func DeleteCampaign(id uint) (*model.Campaign, error) {
 	campaign, err := GetCampaign(id)
-	if err != nil {
+	if campaign == nil || err != nil {
 		return campaign, err
 	}
-	delete(campaignStore, id)
+	result := db.DB.Delete(campaign)
+	if result.Error != nil {
+		return nil, result.Error
+	}
 	entry := log.WithField("ID", id)
 	entry.Info("Successfully deleted campaign.")
 	entry.Tracef("Deleted: %v", campaign)

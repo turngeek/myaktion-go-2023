@@ -12,7 +12,7 @@ import (
 
 var DB *gorm.DB
 
-func init() {
+func Init() {
 	dsn := fmt.Sprintf("root:root@tcp(%s)/myaktion?charset=utf8&parseTime=True&loc=Local", os.Getenv("DB_CONNECT"))
 	log.Info("Using database connection string: ", dsn)
 	var err error

@@ -7,10 +7,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
+	"github.com/turngeek/myaktion-go-2023/src/myaktion/db"
 	"github.com/turngeek/myaktion-go-2023/src/myaktion/handler"
 )
 
 func init() {
+	// ensure that logger is initialized before connecting to DB
+	defer db.Init()
 	// init logger
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetReportCaller(true)
