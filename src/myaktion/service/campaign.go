@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/turngeek/myaktion-go-2023/src/myaktion/db"
 	"github.com/turngeek/myaktion-go-2023/src/myaktion/model"
 )
 
@@ -18,9 +19,10 @@ func init() {
 }
 
 func CreateCampaign(campaign *model.Campaign) error {
-	campaign.ID = actCampaignId
-	campaignStore[actCampaignId] = campaign
-	actCampaignId += 1
+	result := db.DB.Create(campaign)
+	if result.Error != nil {
+		return result.Error
+	}
 	log.Infof("Successfully stored new campaign with ID %v in database.", campaign.ID)
 	log.Tracef("Stored: %v", campaign)
 	return nil
@@ -28,10 +30,9 @@ func CreateCampaign(campaign *model.Campaign) error {
 
 func GetCampaigns() ([]model.Campaign, error) {
 	var campaigns []model.Campaign
-	for _, campaign := range campaignStore {
-		// Note: *campaign does only create a shallow copy of the campaign, means the donation slice is still the same as for campaignStore
-		// Ok for this use-case as we're just serializing after usage
-		campaigns = append(campaigns, *campaign)
+	result := db.DB.Preload("Donations").Find(&campaigns)
+	if result.Error != nil {
+		return nil, result.Error
 	}
 	log.Tracef("Retrieved: %v", campaigns)
 	return campaigns, nil
