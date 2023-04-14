@@ -29,5 +29,9 @@ func main() {
 	router.HandleFunc("/health", handler.Health).Methods("GET")
 	router.HandleFunc("/campaign", handler.CreateCampaign).Methods("POST")
 	router.HandleFunc("/campaigns", handler.GetCampaigns).Methods("GET")
+	router.HandleFunc("/campaigns/{id}", handler.GetCampaign).Methods("GET")
+	router.HandleFunc("/campaigns/{id}", handler.UpdateCampaign).Methods("PUT")
+	router.HandleFunc("/campaigns/{id}", handler.DeleteCampaign).Methods("DELETE")
+	router.HandleFunc("/campaigns/{id}/donation", handler.AddDonation).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8000", router))
 }

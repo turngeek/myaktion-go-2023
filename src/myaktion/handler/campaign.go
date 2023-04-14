@@ -21,14 +21,13 @@ func getCampaign(r *http.Request) (*model.Campaign, error) {
 }
 
 func CreateCampaign(w http.ResponseWriter, r *http.Request) {
-	var campaign *model.Campaign
 	campaign, err := getCampaign(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := service.CreateCampaign(campaign); err != nil {
-		log.Printf("Error calling service CreateCampaign: %v", err)
+		log.Errorf("Error calling service CreateCampaign: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -38,9 +37,71 @@ func CreateCampaign(w http.ResponseWriter, r *http.Request) {
 func GetCampaigns(w http.ResponseWriter, r *http.Request) {
 	campaigns, err := service.GetCampaigns()
 	if err != nil {
-		log.Printf("Error calling service GetCampaigns: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Errorf("Error calling service GetCampaigns: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	sendJson(w, campaigns)
+}
+
+func GetCampaign(w http.ResponseWriter, r *http.Request) {
+	id, err := getId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	campaign, err := service.GetCampaign(id)
+	if err != nil {
+		log.Errorf("Failure retrieving campaign with ID %v: %v", id, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if campaign == nil {
+		http.Error(w, "404 campaign not found", http.StatusNotFound)
+		return
+	}
+	sendJson(w, campaign)
+}
+
+func UpdateCampaign(w http.ResponseWriter, r *http.Request) {
+	id, err := getId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	campaign, err := getCampaign(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	campaign, err = service.UpdateCampaign(id, campaign)
+	if err != nil {
+		log.Errorf("Failure updating campaign with ID %v: %v", id, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if campaign == nil {
+		http.Error(w, "404 campaign not found", http.StatusNotFound)
+		return
+	}
+	sendJson(w, campaign)
+}
+
+func DeleteCampaign(w http.ResponseWriter, r *http.Request) {
+	id, err := getId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	campaign, err := service.DeleteCampaign(id)
+	if err != nil {
+		log.Errorf("Failure deleting campaign with ID %v: %v", id, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if campaign == nil {
+		http.Error(w, "404 campaign not found", http.StatusNotFound)
+		return
+	}
+	sendJson(w, result{Success: "OK"})
 }
