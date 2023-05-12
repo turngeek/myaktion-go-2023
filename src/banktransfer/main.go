@@ -33,7 +33,10 @@ func main() {
 		log.Fatalf("failed to listen on grpc port %d: %v", grpcPort, err)
 	}
 	grpcServer := grpc.NewServer()
-	banktransfer.RegisterBankTransferServer(grpcServer, service.NewBankTransferService())
+	transferService := service.NewBankTransferService()
+	transferService.Start()
+	defer transferService.Stop()
+	banktransfer.RegisterBankTransferServer(grpcServer, transferService)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve gRPC server over port %d: %v", grpcPort, err)
 	}
