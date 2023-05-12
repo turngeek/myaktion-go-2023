@@ -49,6 +49,26 @@ func AddDonation(campaignId uint, donation *model.Donation) error {
 	return nil
 }
 
+func MarkDonation(id uint) error {
+	entry := log.WithField("donationId", id)
+	donation := new(model.Donation)
+	result := db.DB.First(donation, id)
+	if result.Error != nil {
+		entry.WithError(result.Error).Error("Error retrieving donation")
+		return result.Error
+	}
+	entry = entry.WithField("donation", donation)
+	entry.Trace("Retrieved donation")
+	donation.Status = model.TRANSFERRED
+	result = db.DB.Save(donation)
+	if result.Error != nil {
+		entry.WithError(result.Error).Error("Can't update donation")
+		return result.Error
+	}
+	entry.Info("Successfully updated status of donation")
+	return nil
+}
+
 func convertAccount(account *model.Account) *banktransfer.Account {
 	return &banktransfer.Account{
 		Name:     account.Name,
