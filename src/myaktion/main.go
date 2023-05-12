@@ -36,5 +36,6 @@ func main() {
 	router.HandleFunc("/campaigns/{id}", handler.UpdateCampaign).Methods("PUT")
 	router.HandleFunc("/campaigns/{id}", handler.DeleteCampaign).Methods("DELETE")
 	router.HandleFunc("/campaigns/{id}/donation", handler.AddDonation).Methods("POST")
+	go monitortransactions()
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
