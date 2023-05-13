@@ -29,13 +29,15 @@ func init() {
 func main() {
 	log.Println("Starting My-Aktion API server")
 	router := mux.NewRouter()
+	// public APIs
 	router.HandleFunc("/health", handler.Health).Methods("GET")
-	router.HandleFunc("/campaign", handler.CreateCampaign).Methods("POST")
 	router.HandleFunc("/campaigns", handler.GetCampaigns).Methods("GET")
 	router.HandleFunc("/campaigns/{id}", handler.GetCampaign).Methods("GET")
-	router.HandleFunc("/campaigns/{id}", handler.UpdateCampaign).Methods("PUT")
-	router.HandleFunc("/campaigns/{id}", handler.DeleteCampaign).Methods("DELETE")
 	router.HandleFunc("/campaigns/{id}/donation", handler.AddDonation).Methods("POST")
+	// private APIs
+	router.Handle("/campaign", wrapJWT(handler.CreateCampaign)).Methods("POST")
+	router.Handle("/campaigns/{id}", wrapJWT(handler.UpdateCampaign)).Methods("PUT")
+	router.Handle("/campaigns/{id}", wrapJWT(handler.DeleteCampaign)).Methods("DELETE")
 	go monitortransactions()
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
