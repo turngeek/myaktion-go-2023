@@ -28,9 +28,20 @@ Shut down the docker containers:
 
 ## Use the REST API
 
+### Authenticate
+
+First, you have to [get an Auth token](https://auth0.com/docs/flows/call-your-api-using-resource-owner-password-flow#request-tokens) by calling:
+
+         payload="{\"client_id\":\"9l4Fp3tK9mtRGSdS8WdSVHiE8QFToMOD\",\"client_secret\":\"$CLIENT_SECRET\",\"audience\":\"http://localhost:8000\",\"grant_type\":\"password\",\"username\":\"$API_USERNAME\",\"password\":\"$API_PASSWORD\"}"
+         TOKEN=$(curl --request POST --url https://dev-elymxg0u.us.auth0.com/oauth/token --header 'content-type: application/json' --data "$payload" | jq -r .access_token)
+
+The token that will be returned, has to be used in the private API calls below.
+
+To get the credentials, you have to configure an application in your [Auth0 account](https://manage.auth0.com/).
+
 ### Add a campaign
 
-      # curl -H "Content-Type: application/json" -d '{"name":"Covid","organizerName":"Martin","donationMinimum":2,"targetAmount":100,"account":{"name":"Martin","bankName":"DKB","number":"123456"}}' localhost:8000/campaign
+      # curl -H "Content-Type: application/json" -d '{"name":"Covid","organizerName":"Martin","donationMinimum":2,"targetAmount":100,"account":{"name":"Martin","bankName":"DKB","number":"123456"}}' localhost:8000/campaign --header "authorization: Bearer $TOKEN"
 
 To check if the campaign was persisted, call:
 
@@ -51,13 +62,13 @@ campaign with ID 1, call:
 
 The following command deletes the campaign with ID 1:
 
-      # curl -X DELETE localhost:8000/campaigns/1
+      # curl -X DELETE localhost:8000/campaigns/1  --header "authorization: Bearer $TOKEN"
 
 ### Update a campaign
 
 The following command updates the campaign with ID 1:
 
-      # curl -X PUT -H "Content-Type: application/json"  -d '{"name":"Corona","organizerName":"Marcus","donationMinimum":2,"targetAmount":100,"Account":{"Name":"Marcus","BankName":"DKB","Number":"123456"}}' localhost:8000/campaigns/1
+      # curl -X PUT -H "Content-Type: application/json"  -d '{"name":"Corona","organizerName":"Marcus","donationMinimum":2,"targetAmount":100,"Account":{"Name":"Marcus","BankName":"DKB","Number":"123456"}}' localhost:8000/campaigns/1  --header "authorization: Bearer $TOKEN"
 
 ### Add a donation to a campaign
 
