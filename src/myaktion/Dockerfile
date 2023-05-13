@@ -9,6 +9,7 @@ RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3
 WORKDIR /go/src/app
 COPY ./myaktion .
 COPY ./banktransfer/grpc/banktransfer/banktransfer.proto ./client/banktransfer/
+COPY ./wait-for-it.sh .
 
 RUN go mod download
 RUN go generate ./...

@@ -7,11 +7,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/turngeek/myaktion-go-2023/src/banktransfer/grpc/banktransfer"
+	"github.com/turngeek/myaktion-go-2023/src/banktransfer/kafka"
 	"github.com/turngeek/myaktion-go-2023/src/banktransfer/service"
 	"google.golang.org/grpc"
 )
 
 func init() {
+	defer kafka.EnsureTransactionTopic()
 	// init logger
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetReportCaller(true)

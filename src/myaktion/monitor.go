@@ -18,8 +18,7 @@ func monitortransactions() {
 }
 
 func connectandmonitor() {
-	// TODO: here we force a deadline after 10 seconds to test the re-connecting logic
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 	conn, err := client.GetBankTransferConnection(ctx)
 	if err != nil {

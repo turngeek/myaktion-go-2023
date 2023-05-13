@@ -2,32 +2,23 @@ package service
 
 import (
 	"context"
-	"math/rand"
-	"sync/atomic"
-	"time"
+	"errors"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/turngeek/myaktion-go-2023/src/banktransfer/grpc/banktransfer"
+	"github.com/turngeek/myaktion-go-2023/src/banktransfer/kafka"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-const retryTime = 5 * time.Second
-
 type BankTransferService struct {
 	banktransfer.BankTransferServer
-	counter    int32
-	queue      chan banktransfer.Transaction
-	retryQueue chan banktransfer.Transaction
-	stop       chan struct{}
+	keyGenerator      *KeyGenerator
+	transactionWriter kafka.TransactionWriter
 }
 
 func NewBankTransferService() *BankTransferService {
-	rand.Seed(time.Now().UnixNano())
-	return &BankTransferService{
-		counter:    0,
-		queue:      make(chan banktransfer.Transaction),
-		retryQueue: make(chan banktransfer.Transaction),
-		stop:       make(chan struct{})}
+	return &BankTransferService{keyGenerator: NewKeyGenerator()}
 }
 
 func (s *BankTransferService) TransferMoney(_ context.Context, transaction *banktransfer.Transaction) (*emptypb.Empty, error) {
@@ -39,84 +30,62 @@ func (s *BankTransferService) TransferMoney(_ context.Context, transaction *bank
 
 func (s *BankTransferService) ProcessTransactions(stream banktransfer.BankTransfer_ProcessTransactionsServer) error {
 	return func() error {
+		r := kafka.NewTransactionReader()
 		for {
-			select {
-			case <-stream.Context().Done():
-				log.Info("Watching transactions cancelled from the client side")
-				return nil
-			case transaction := <-s.queue:
+			err := r.Read(stream.Context(), func(transaction *banktransfer.Transaction) error {
 				id := transaction.Id
 				entry := log.WithField("transaction", transaction)
 				entry.Info("Sending transaction to the client")
-				if err := stream.Send(&transaction); err != nil {
-					s.requeueTransaction(&transaction)
-					entry.WithError(err).Warn("Sending transaction failed")
-					return err
+				if err := stream.Send(transaction); err != nil {
+					return fmt.Errorf("error sending transaction: %w", err)
 				}
 				entry.Info("Transaction sent. Waiting for processing response")
 				response, err := stream.Recv()
 				if err != nil {
-					s.requeueTransaction(&transaction)
-					entry.WithError(err).Warn("Receiving processing response failed")
-					return err
+					return fmt.Errorf("error receiving transaction response: %w", err)
 				}
 				if response.Id != id {
 					// NOTE: this is just a guard and not happening as transaction is local per connection
-					entry.Error("Received processing response of a different transaction")
-				} else {
-					entry.Info("Processing response received")
+					return errors.New("received processing response of a different transaction")
 				}
+				entry.Info("Processing response received")
+				return nil
+			})
+			if err != nil {
+				log.WithError(err).Error("Failed to read transaction")
+				break
 			}
 		}
+		if err := r.Close(); err != nil {
+			log.WithError(err).Error("Failed to close transaction reader")
+			return nil
+		}
+		log.Info("Transaction reader successfully closed")
+		return nil
 	}()
 }
 
 func (s *BankTransferService) Start() {
 	log.Info("Starting banktransfer service")
-	go func() {
-		for {
-			select {
-			case <-s.stop:
-				break
-			case transaction := <-s.retryQueue:
-				s.queue <- transaction
-			}
-		}
-	}()
+	s.transactionWriter = kafka.NewTransactionWriter()
+	log.Info("Successfully created transaction writer")
 }
 
 func (s *BankTransferService) Stop() {
 	log.Info("Stopping banktransfer service")
-	close(s.stop)
-	// XXX: we leave these channels open on purpose as the go routines of processTransaction and requeueTransaction
-	// might still enqueue transactions after calling Stop
-	//close(s.queue)
-	//close(s.retryQueue)
+	s.transactionWriter.Close()
+	log.Info("Successfully closed connection to transaction writer")
 }
 
 func (s *BankTransferService) processTransaction(transaction *banktransfer.Transaction) {
 	entry := log.WithField("transaction", transaction)
 	go func(transaction banktransfer.Transaction) {
 		entry.Info("Start processing transaction")
-		transaction.Id = s.getUniqueId()
-		time.Sleep(time.Duration(rand.Intn(9)+1) * time.Second)
-		s.queue <- transaction
-		entry.Info("Processing transaction finished")
+		transaction.Id = s.keyGenerator.getUniqueId()
+		if err := s.transactionWriter.Write(&transaction); err != nil {
+			entry.WithError(err).Error("Can't write transaction to transaction writer")
+			return
+		}
+		entry.Info("Transaction forwarded to transaction writer. Processing transaction finished")
 	}(*transaction)
-}
-
-// NOTE: we prevent retrying a transaction endlessly. Usually it's best practice to move
-// transactions to an error queue after failing for a couple of times
-func (s *BankTransferService) requeueTransaction(transaction *banktransfer.Transaction) {
-	entry := log.WithField("transaction", transaction)
-	go func(transaction banktransfer.Transaction) {
-		entry.Infof("Requeuing transaction. Wait for %f seconds", retryTime.Seconds())
-		time.Sleep(retryTime)
-		s.retryQueue <- transaction
-		entry.Info("Requeued transaction")
-	}(*transaction)
-}
-
-func (s *BankTransferService) getUniqueId() int32 {
-	return atomic.AddInt32(&s.counter, 1)
 }
