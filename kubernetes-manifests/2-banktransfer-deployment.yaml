@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banktransfer
+  namespace: myaktion
+spec:
+  selector:
+    matchLabels:
+      run: banktransfer
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        run: banktransfer
+    spec:
+      containers:
+        - name: banktransfer
+          image: myaktion-banktransfer
+          imagePullPolicy: Never
+          env:
+            - name: KAFKA_CONNECT
+              value: mykafka:9092

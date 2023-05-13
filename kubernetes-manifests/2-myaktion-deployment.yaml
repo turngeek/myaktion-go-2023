@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myaktion
+  namespace: myaktion
+spec:
+  selector:
+    matchLabels:
+      run: myaktion
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: myaktion
+    spec:
+      containers:
+        - name: myaktion
+          image: myaktion-myaktion
+          imagePullPolicy: Never
+          env:
+            - name: DB_CONNECT
+              value: mariadb:3306
+            - name: BANKTRANSFER_CONNECT
+              value: banktransfer:9111
+            - name: LOG_LEVEL
+              value: info
