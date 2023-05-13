@@ -79,6 +79,9 @@ func (s *BankTransferService) Stop() {
 
 func (s *BankTransferService) processTransaction(transaction *banktransfer.Transaction) {
 	entry := log.WithField("transaction", transaction)
+	// NOTE: we need to copy the transaction as we are using a own go routine to process the transaction
+	// this produces a `go vet` warning as gRPC messages contain a mutex that is also copied but not used.
+	// therefore this warning can be ignored
 	go func(transaction banktransfer.Transaction) {
 		entry.Info("Start processing transaction")
 		transaction.Id = s.keyGenerator.getUniqueId()
